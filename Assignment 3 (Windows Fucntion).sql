@@ -55,13 +55,17 @@ select customer_id, total_spending from CustomerSpending
 where customer_rank <= (select 0.2 * count(distinct customer_id) +1 from CustomerSpending);
 
 -- Que 8)Calculate the running total of rentals per category, ordered by rental count.
-WITH CategoryRentalCount AS(
-select fc.category_id, Count(r.rental_id) AS rental_count,
-Rank() over(partition by fc.category_id order by count(r.rental_id)desc) as rental_rank from film_category fc
-join rental r on fc.film_id = r.inventory_id group by fc.category_id )
-select crc.category_id, crc.rental_count, 
-sum(crc.rental_count) over(order by crc.rental_rank) as running_total from 
-CategoryRentalCount crc order by crc.rental_rank;
+use mavenmovies;
+select category_id, film_id, title, rental_count,
+       SUM(rental_count) OVER (PARTITION BY category_id ORDER BY film_id) AS running_total
+FROM (
+    SELECT fc.category_id, f.film_id, f.title, COUNT(r.rental_id) AS rental_count
+    FROM film f
+	JOIN film_category fc ON f.film_id = fc.film_id
+    JOIN inventory i ON f.film_id = i.film_id
+    JOIN rental r ON i.inventory_id = r.inventory_id
+    GROUP BY fc.category_id, f.film_id, f.title
+    ) AS category_film_rentals;
 
 -- Que 9)Find the films that have been rented less than the average rental count for their respective categories.
  WITH FilmRentalInfo AS (
